@@ -2,6 +2,18 @@
 """Django's command-line utility for administrative tasks (new backend project)."""
 import os
 import sys
+from pathlib import Path
+
+# backendディレクトリをPythonパスに追加
+BASE_DIR = Path(__file__).resolve().parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+# Some environments export DJANGO_SETTINGS_MODULE=backend.config.settings,
+# which is not importable when running from the backend/ directory.
+_settings_module = os.environ.get("DJANGO_SETTINGS_MODULE")
+if _settings_module in {"backend", "backend.settings", "backend.config.settings"}:
+    os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings"
 
 
 def main() -> None:
@@ -20,4 +32,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

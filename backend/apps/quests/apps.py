@@ -3,7 +3,7 @@ from django.apps import AppConfig
 
 class QuestsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "backend.apps.quests"
+    name = "apps.quests"
     label = "quests"
     verbose_name = "Quests"
 
