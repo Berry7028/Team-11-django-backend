@@ -45,7 +45,7 @@ def _get_user_uuid(request: Request) -> str | None:
 
 
 def _replace_today_condition(
-    uuid: str, is_morning: bool, mood: str, condition: str
+    uuid: str, is_morning: bool, mood: str, condition: str, free_text: str = ""
 ) -> dict:
     """
     同じ日の既存レコードを削除してから、新しいレコードを挿入する。
@@ -76,11 +76,25 @@ def _replace_today_condition(
 
     # 既存レコードがあれば削除
     if existing_result.data:
-        for record in existing_result.data:
+        # idが存在する場合はidで削除、存在しない場合はuuidと日付範囲で削除
+        if isinstance(existing_data, dict) and "id" in existing_data:
+            for record in existing_result.data:
+                if isinstance(record, dict) and "id" in record:
+                    delete_result = (
+                        supabase.table("users_condition")
+                        .delete()
+                        .eq("id", record["id"])
+                        .execute()
+                    )
+                    if getattr(delete_result, "error", None):
+                        raise RuntimeError(delete_result.error)
+        else:
             delete_result = (
                 supabase.table("users_condition")
                 .delete()
-                .eq("id", record["id"])
+                .eq("uuid", uuid)
+                .gte("created_at", today_start.isoformat())
+                .lt("created_at", tomorrow_start.isoformat())
                 .execute()
             )
             if getattr(delete_result, "error", None):
@@ -98,6 +112,12 @@ def _replace_today_condition(
         ),
         "night_condition": (
             condition if not is_morning else existing_data.get("night_condition")
+        ),
+        "morning_note": (
+            free_text if is_morning else existing_data.get("morning_note")
+        ),
+        "night_note": (
+            free_text if not is_morning else existing_data.get("night_note")
         ),
     }
 
@@ -134,6 +154,7 @@ class MorningQuestionnaireView(APIView):
                 True,
                 serializer.validated_data["mood"],
                 serializer.validated_data["condition"],
+                serializer.validated_data.get("free_text", ""),
             )
         except RuntimeError as exc:
             return Response(
@@ -164,6 +185,7 @@ class NightQuestionnaireView(APIView):
                 False,
                 serializer.validated_data["mood"],
                 serializer.validated_data["condition"],
+                serializer.validated_data.get("free_text", ""),
             )
         except RuntimeError as exc:
             return Response(

@@ -51,7 +51,7 @@ POST /api/questionnaire/night
 |------------|-----|------|------|
 | `mood` | string | 必須 | 気分（選択肢: `"絶好調"`, `"普通"`, `"モヤモヤ"`, `"つらい"`） |
 | `condition` | string | 必須 | 体調（選択肢: `"軽い"`, `"ふつう"`, `"だるい"`） |
-| `free_text` | string | 任意 | 自由入力テキスト（最大1000文字、現在は未使用） |
+| `free_text` | string | 任意 | 自由入力テキスト（最大1000文字、朝アンケートの場合は`morning_note`、夜アンケートの場合は`night_note`として保存されます） |
 
 ## レスポンス形式
 
@@ -62,8 +62,10 @@ POST /api/questionnaire/night
   "uuid": "550e8400-e29b-41d4-a716-446655440000",
   "morning_mood": "普通",
   "morning_condition": "軽い",
+  "morning_note": "今日は調子が良いです",
   "night_mood": null,
   "night_condition": null,
+  "night_note": null,
   "created_at": "2026-01-29T02:00:00.000Z",
   "updated_at": "2026-01-29T02:00:00.000Z"
 }
@@ -242,8 +244,10 @@ async function submitMorningQuestionnaire(
 | `uuid` | text | Supabaseの`public.users`テーブルの`uuid`（主キー） |
 | `morning_mood` | text | 朝の気分（`"絶好調"`, `"普通"`, `"モヤモヤ"`, `"つらい"`のいずれか） |
 | `morning_condition` | text | 朝の体調（`"軽い"`, `"ふつう"`, `"だるい"`のいずれか） |
+| `morning_note` | text | 朝の自由入力テキスト（最大1000文字） |
 | `night_mood` | text | 夜の気分（`"絶好調"`, `"普通"`, `"モヤモヤ"`, `"つらい"`のいずれか） |
 | `night_condition` | text | 夜の体調（`"軽い"`, `"ふつう"`, `"だるい"`のいずれか） |
+| `night_note` | text | 夜の自由入力テキスト（最大1000文字） |
 | `created_at` | timestamp | レコード作成日時 |
 | `updated_at` | timestamp | レコード更新日時 |
 
@@ -251,18 +255,18 @@ async function submitMorningQuestionnaire(
 
 1. **同じ日の既存レコードがある場合**:
    - 既存レコードを削除してから新規レコードを作成
-   - 朝アンケート送信時: `morning_mood`と`morning_condition`を更新、`night_mood`と`night_condition`は既存値を保持（なければ`null`）
-   - 夜アンケート送信時: `night_mood`と`night_condition`を更新、`morning_mood`と`morning_condition`は既存値を保持（なければ`null`）
+   - 朝アンケート送信時: `morning_mood`、`morning_condition`、`morning_note`を更新、`night_mood`、`night_condition`、`night_note`は既存値を保持（なければ`null`）
+   - 夜アンケート送信時: `night_mood`、`night_condition`、`night_note`を更新、`morning_mood`、`morning_condition`、`morning_note`は既存値を保持（なければ`null`）
 
 2. **同じ日の既存レコードがない場合**:
    - 新規レコードを作成
-   - 朝アンケート送信時: `morning_mood`と`morning_condition`を設定、`night_mood`と`night_condition`は`null`
-   - 夜アンケート送信時: `night_mood`と`night_condition`を設定、`morning_mood`と`morning_condition`は`null`
+   - 朝アンケート送信時: `morning_mood`、`morning_condition`、`morning_note`を設定、`night_mood`、`night_condition`、`night_note`は`null`
+   - 夜アンケート送信時: `night_mood`、`night_condition`、`night_note`を設定、`morning_mood`、`morning_condition`、`morning_note`は`null`
 
 ## 注意事項
 
 1. **認証**: 現在は認証不要（`AllowAny`）ですが、`X-User-UUID`ヘッダーは必須です
-2. **自由入力**: `free_text`フィールドは現在未使用です。将来的に別テーブルで管理する予定です
+2. **自由入力**: `free_text`フィールドは、朝アンケートの場合は`morning_note`、夜アンケートの場合は`night_note`として`users_condition`テーブルに保存されます
 3. **日付判定**: 同じ日かどうかの判定はUTC基準で行われます
 4. **Supabase設定**: `SUPABASE_URL`と`SUPABASE_KEY`の環境変数が設定されている必要があります
 5. **データ更新**: 同じ日の既存レコードは削除してから新規作成されます（最新1件のみ保持）
