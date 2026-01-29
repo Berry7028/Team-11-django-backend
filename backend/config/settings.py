@@ -17,15 +17,14 @@ from django.core.management.utils import get_random_secret_key
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# .env.localファイルを読み込む（存在する場合）
+env_path = BASE_DIR.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+
+# 次に .env.local を読み込んでオーバーライド（存在する場合）
 env_local_path = BASE_DIR.parent / ".env.local"
 if env_local_path.exists():
-    load_dotenv(env_local_path)
-else:
-    # .env.localが存在しない場合は.envを読み込む
-    env_path = BASE_DIR.parent / ".env"
-    if env_path.exists():
-        load_dotenv(env_path)
+    load_dotenv(env_local_path, override=True)
 
 
 def _env(name: str, default: str | None = None) -> str:
