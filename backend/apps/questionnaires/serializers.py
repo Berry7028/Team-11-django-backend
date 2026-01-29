@@ -25,3 +25,17 @@ class AnswerSerializer(serializers.ModelSerializer):
         fields = ["id", "questionnaire", "submitted_at", "payload"]
         read_only_fields = ["submitted_at"]
 
+
+class QuestionnaireRequestSerializer(serializers.Serializer):
+    mood = serializers.ChoiceField(
+        choices=["絶好調", "普通", "モヤモヤ", "つらい"],
+    )
+    condition = serializers.ChoiceField(
+        choices=["軽い", "ふつう", "だるい"],
+    )
+    free_text = serializers.CharField(
+        allow_blank=True,
+        required=False,
+        max_length=1000,
+    )
+
