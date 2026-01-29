@@ -31,7 +31,7 @@ class QuestionnaireRequestSerializer(serializers.Serializer):
         choices=["絶好調", "普通", "モヤモヤ", "つらい"],
     )
     condition = serializers.ChoiceField(
-        choices=["軽い", "ふつう", "だるい"],
+        choices=["軽い", "ふつう", "だるい", "痛い"],
     )
     free_text = serializers.CharField(
         allow_blank=True,
