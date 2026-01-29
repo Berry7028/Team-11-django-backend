@@ -1,6 +1,6 @@
 from django.urls import include, path
 
-from backend.apps.common.routers import NoFormatSuffixRouter
+from apps.common.routers import NoFormatSuffixRouter
 
 from .views import CurrentUserView, UserProfileViewSet
 

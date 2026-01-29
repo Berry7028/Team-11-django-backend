@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.db import models
 
-from backend.apps.quests.models import Quest
+from apps.quests.models import Quest
 
 
 class Condition(models.Model):
