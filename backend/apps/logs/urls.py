@@ -1,4 +1,4 @@
-from backend.apps.common.routers import NoFormatSuffixRouter
+from apps.common.routers import NoFormatSuffixRouter
 
 from .views import LogEntryViewSet
 

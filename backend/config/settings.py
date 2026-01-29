@@ -52,13 +52,13 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     # Project apps
-    "backend.apps.accounts",
-    "backend.apps.conditions",
-    "backend.apps.quests",
-    "backend.apps.mascots",
-    "backend.apps.logs",
-    "backend.apps.questionnaires",
-    "backend.apps.ai",
+    "apps.accounts",
+    "apps.conditions",
+    "apps.quests",
+    "apps.mascots",
+    "apps.logs",
+    "apps.questionnaires",
+    "apps.ai",
 ]
 
 
@@ -73,7 +73,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "backend.config.urls"
+ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
     {
@@ -91,8 +91,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "backend.config.wsgi.application"
-ASGI_APPLICATION = "backend.config.asgi.application"
+WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
 
 DATABASES = {
