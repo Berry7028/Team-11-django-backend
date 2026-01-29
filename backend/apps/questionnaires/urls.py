@@ -1,10 +1,21 @@
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
-from .views import AnswerViewSet, QuestionnaireViewSet
+from backend.apps.common.routers import NoFormatSuffixRouter
 
-router = DefaultRouter()
+from .views import (
+    AnswerViewSet,
+    MorningQuestionnaireView,
+    NightQuestionnaireView,
+    QuestionnaireViewSet,
+)
+
+router = NoFormatSuffixRouter(trailing_slash=False)
 router.register("questionnaires", QuestionnaireViewSet, basename="questionnaire")
 router.register("answers", AnswerViewSet, basename="answer")
 
-urlpatterns = router.urls
+urlpatterns = [
+    path("morning", MorningQuestionnaireView.as_view(), name="questionnaire-morning"),
+    path("night", NightQuestionnaireView.as_view(), name="questionnaire-night"),
+    *router.urls,
+]
 

@@ -11,10 +11,20 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from django.core.management.utils import get_random_secret_key
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env_path = BASE_DIR.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+
+# 次に .env.local を読み込んでオーバーライド（存在する場合）
+env_local_path = BASE_DIR.parent / ".env.local"
+if env_local_path.exists():
+    load_dotenv(env_local_path, override=True)
 
 
 def _env(name: str, default: str | None = None) -> str:
@@ -139,6 +149,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "URL_FORMAT_OVERRIDE": None,  # format_suffix_patternsを無効化
 }
 
 

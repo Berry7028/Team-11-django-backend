@@ -11,6 +11,7 @@ urlpatterns = [
     path("api/mascots/", include("backend.apps.mascots.urls")),
     path("api/logs/", include("backend.apps.logs.urls")),
     path("api/questionnaires/", include("backend.apps.questionnaires.urls")),
+    path("api/questionnaire/", include("backend.apps.questionnaires.urls")),
     path("api/ai/", include("backend.apps.ai.urls")),
 ]
 

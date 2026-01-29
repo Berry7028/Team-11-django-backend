@@ -1,8 +1,8 @@
-from rest_framework.routers import DefaultRouter
+from backend.apps.common.routers import NoFormatSuffixRouter
 
 from .views import ConditionViewSet
 
-router = DefaultRouter()
+router = NoFormatSuffixRouter(trailing_slash=False)
 router.register("conditions", ConditionViewSet, basename="condition")
 
 urlpatterns = router.urls

@@ -1,9 +1,10 @@
 from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+
+from backend.apps.common.routers import NoFormatSuffixRouter
 
 from .views import CurrentUserView, UserProfileViewSet
 
-router = DefaultRouter()
+router = NoFormatSuffixRouter(trailing_slash=False)
 router.register("profiles", UserProfileViewSet, basename="user-profile")
 
 urlpatterns = [
