@@ -310,14 +310,14 @@ def get_mascot_state(user_uuid: str) -> dict[str, str] | None:
         .table("mascots")
         .select("status, message")
         .eq("uuid", user_uuid)
-        .single()
+        .limit(1)
         .execute()
     )
 
-    if result.data:
+    if result.data and len(result.data) > 0:
         return {
-            "status": result.data["status"],
-            "message": result.data["message"],
+            "status": result.data[0]["status"],
+            "message": result.data[0]["message"],
         }
 
     return None
