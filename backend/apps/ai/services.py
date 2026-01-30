@@ -175,17 +175,19 @@ SYSTEM_PROMPT = """
 
 
 def get_user_condition(user_uuid: str) -> dict[str, Any] | None:
-    """Supabaseからユーザーの最新のconditionを取得"""
+    """Supabaseからユーザーの前日分のconditionを取得"""
     client = get_supabase_client()
     result = (
         client.table("users_condition")
         .select("*")
         .eq("uuid", user_uuid)
         .order("created_at", desc=True)
-        .limit(1)
+        .limit(2)
         .execute()
     )
     if result.data:
+        if len(result.data) >= 2:
+            return result.data[1]
         return result.data[0]
     return None
 
@@ -321,5 +323,4 @@ def get_mascot_state(user_uuid: str) -> dict[str, str] | None:
         }
 
     return None
-
 
