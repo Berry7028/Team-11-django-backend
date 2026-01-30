@@ -175,12 +175,12 @@ SYSTEM_PROMPT = """
 
 
 def get_user_condition(user_uuid: str) -> dict[str, Any] | None:
-    """Supabaseからユーザーの前日分のconditionを優先して取得"""
+    """Supabaseからユーザーの前日以前の最新conditionを優先して取得し、なければ最新を返す"""
     client = get_supabase_client()
     today_start = datetime.now(timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
-    previous_result = (
+    before_today_result = (
         client.table("users_condition")
         .select("*")
         .eq("uuid", user_uuid)
@@ -189,8 +189,8 @@ def get_user_condition(user_uuid: str) -> dict[str, Any] | None:
         .limit(1)
         .execute()
     )
-    if previous_result.data:
-        return previous_result.data[0]
+    if before_today_result.data:
+        return before_today_result.data[0]
 
     latest_result = (
         client.table("users_condition")
