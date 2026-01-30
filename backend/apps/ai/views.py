@@ -9,7 +9,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .services import generate_hint, generate_recommendations
+from .services import generate_hint, generate_recommendations, get_mascot_state
 
 
 class HintView(APIView):
@@ -67,3 +67,27 @@ class RecommendationsView(APIView):
 
         return Response(result, status=status.HTTP_200_OK)
 
+
+
+class MascotStateView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request: Request) -> Response:
+        user_uuid = request.headers.get("X-User-UUID")
+
+        if not user_uuid:
+            return Response(
+                {"error": "X-User-UUID ヘッダーが必要です"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        mascot = get_mascot_state(user_uuid)
+
+        if mascot is None:
+            return Response(
+                {"error": "mascot not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(mascot, status=status.HTTP_200_OK)
+    
