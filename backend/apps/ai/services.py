@@ -212,3 +212,31 @@ def generate_recommendations(user_uuid: str) -> dict[str, Any]:
 
     return {"quests": quests, "mascot": mascot}
 
+
+
+
+def get_mascot_state(user_uuid: str) -> dict[str, str] | None:
+    """
+    Supabase の mascots テーブルから
+    指定ユーザーの status, message を取得
+    """
+    client = get_supabase_client()
+
+    result = (
+        client
+        .table("mascots")
+        .select("status, message")
+        .eq("uuid", user_uuid)
+        .single()
+        .execute()
+    )
+
+    if result.data:
+        return {
+            "status": result.data["status"],
+            "message": result.data["message"],
+        }
+
+    return None
+
+
