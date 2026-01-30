@@ -28,10 +28,10 @@ class AnswerSerializer(serializers.ModelSerializer):
 
 class QuestionnaireRequestSerializer(serializers.Serializer):
     mood = serializers.ChoiceField(
-        choices=["絶好調", "普通", "モヤモヤ", "つらい"],
+        choices=["絶好調", "いい感じ", "ふつう", "モヤモヤ", "つらい"],
     )
     condition = serializers.ChoiceField(
-        choices=["軽い", "ふつう", "だるい", "痛い"],
+        choices=["絶好調", "いい感じ", "ふつう", "少しだるい", "つらい"],
     )
     free_text = serializers.CharField(
         allow_blank=True,
