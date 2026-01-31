@@ -91,6 +91,7 @@ SYSTEM_PROMPT = """
 - 「体調が優れない場合」→ 無理をせず負担の少ない心身ケアのクエスト（例：深呼吸、ストレッチ、やさしく体を休める）が最優先。
 - 難易度は状態に応じて最適化し、ユーザーが達成感を得る小さなステップとなるよう配慮してください。
 - マスコットはユーザーの現在の気分・体調を反映しつつ、前向き・励ましのメッセージを添えてください。
+- **最新2件のうち両方で気分が「つらい」になっている場合のみ**、マスコットの状態を「Bad」または「Sad」にしてください。1件だけ「つらい」の場合は急に「Bad」「Sad」にしないでください。
 
 **必ず以下の順番・流れで出力してください：**
 1. ユーザーの状態分析と判断根拠（reasoningを必ず明示。なぜその提案をするのかを論理的に）
@@ -174,20 +175,24 @@ SYSTEM_PROMPT = """
 """
 
 
-def get_user_condition(user_uuid: str) -> dict[str, Any] | None:
-    """Supabaseからユーザーの最新のconditionを取得"""
+def get_user_conditions(user_uuid: str, limit: int = 2) -> list[dict[str, Any]]:
+    """Supabaseからユーザーの最新N件のconditionを取得"""
     client = get_supabase_client()
     result = (
         client.table("users_condition")
         .select("*")
         .eq("uuid", user_uuid)
         .order("created_at", desc=True)
-        .limit(1)
+        .limit(limit)
         .execute()
     )
-    if result.data:
-        return result.data[0]
-    return None
+    return result.data if result.data else []
+
+
+def get_user_condition(user_uuid: str) -> dict[str, Any] | None:
+    """Supabaseからユーザーの最新のconditionを取得（後方互換）"""
+    conditions = get_user_conditions(user_uuid, limit=1)
+    return conditions[0] if conditions else None
 
 
 def save_quests(user_uuid: str, quests: list[dict[str, str]], today: date) -> None:
@@ -242,21 +247,44 @@ def generate_recommendations(user_uuid: str) -> dict[str, Any]:
     Returns:
         dict: {"quests": [...], "mascot": {...}} or {"error": "..."}
     """
-    # 1. users_condition を取得
-    condition = get_user_condition(user_uuid)
-    if not condition:
+
+    def _get_value(condition: dict[str, Any] | None, key: str, default: str) -> Any:
+        if not condition:
+            return default
+        value = condition.get(key)
+        return default if value in (None, "") else value
+
+    # 1. users_condition を取得（最新2件: 最新 + 1つ前）
+    conditions = get_user_conditions(user_uuid, limit=2)
+    if not conditions:
         return {"error": "users_condition が見つかりません"}
 
-    # 2. OpenAIへのプロンプトを構築
-    user_input = f"""ユーザーの状態:
-            - 朝の気分: {condition.get("morning_mood", "未入力")}
-            - 朝の体調: {condition.get("morning_condition", "未入力")}
-            - 朝のメモ: {condition.get("morning_note", "未入力")}
-            - 夜の気分: {condition.get("night_mood", "未入力")}
-            - 夜の体調: {condition.get("night_condition", "未入力")}
-            - 夜のメモ: {condition.get("night_note", "未入力")}
+    latest = conditions[0]
+    previous = conditions[1] if len(conditions) > 1 else None
 
-            この情報を元に、5つのクエストとマスコットの状態を生成してください。"""
+    # 2. OpenAIへのプロンプトを構築
+    user_input = f"""ユーザーの状態（最新2件）:
+
+【最新】(created_at: {_get_value(latest, "created_at", "不明")})
+- 朝の気分: {_get_value(latest, "morning_mood", "未入力")}
+- 朝の体調: {_get_value(latest, "morning_condition", "未入力")}
+- 朝のメモ: {_get_value(latest, "morning_note", "未入力")}
+- 夜の気分: {_get_value(latest, "night_mood", "未入力")}
+- 夜の体調: {_get_value(latest, "night_condition", "未入力")}
+- 夜のメモ: {_get_value(latest, "night_note", "未入力")}
+
+【1つ前】(created_at: {_get_value(previous, "created_at", "データなし")})
+- 朝の気分: {_get_value(previous, "morning_mood", "データなし")}
+- 朝の体調: {_get_value(previous, "morning_condition", "データなし")}
+- 朝のメモ: {_get_value(previous, "morning_note", "データなし")}
+- 夜の気分: {_get_value(previous, "night_mood", "データなし")}
+- 夜の体調: {_get_value(previous, "night_condition", "データなし")}
+- 夜のメモ: {_get_value(previous, "night_note", "データなし")}
+
+【重要】マスコットのstatusは、最新2件のうち両方で気分が「つらい」になっている場合のみ「Bad」または「Sad」にしてください。
+1件だけ「つらい」の場合は、急に「Bad」「Sad」にしないでください。
+
+この情報を元に、5つのクエストとマスコットの状態を生成してください。"""
 
     # 3. OpenAI API呼び出し (function calling)
     openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))

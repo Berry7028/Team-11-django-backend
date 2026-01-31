@@ -50,6 +50,8 @@ def _replace_today_condition(
     """
     同じ日の既存レコードを削除してから、新しいレコードを挿入する。
     気分と体調を分離して保存する。
+
+    併せて、users_condition が肥大化しないように、各ユーザー直近2件のみ保持する。
     """
     supabase = get_supabase_client()
 
@@ -71,8 +73,42 @@ def _replace_today_condition(
     if getattr(existing_result, "error", None):
         raise RuntimeError(existing_result.error)
 
-    # 既存レコードから値を取得（朝/夜の別のフィールドを保持）
     existing_data = existing_result.data[0] if existing_result.data else {}
+    
+    if not existing_data:
+        latest_result = (
+            supabase.table("users_condition")
+            .select("*")
+            .eq("uuid", uuid)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        
+        if getattr(latest_result, "error", None):
+            raise RuntimeError(latest_result.error)
+        
+        if latest_result.data:
+            latest_record = latest_result.data[0]
+
+            latest_created_at_str = latest_record.get("created_at")
+            if latest_created_at_str:
+                if isinstance(latest_created_at_str, str):
+                    latest_created_at_str = latest_created_at_str.replace("Z", "+00:00")
+                    try:
+                        latest_created_at = datetime.fromisoformat(latest_created_at_str)
+                    except (ValueError, AttributeError):
+                        latest_created_at = None
+                elif isinstance(latest_created_at_str, datetime):
+                    latest_created_at = latest_created_at_str
+                else:
+                    latest_created_at = None
+                
+                # 最新レコードが今日または昨日のものである場合のみ使用
+                if latest_created_at and latest_created_at.tzinfo is None:
+                    latest_created_at = latest_created_at.replace(tzinfo=timezone.utc)
+                if latest_created_at and latest_created_at >= today_start - timedelta(days=1):
+                    existing_data = latest_record
 
     # 既存レコードがあれば削除
     if existing_result.data:
@@ -121,12 +157,34 @@ def _replace_today_condition(
         ),
     }
 
-    insert_result = (
-        supabase.table("users_condition").insert(insert_payload).execute()
-    )
+    insert_result = supabase.table("users_condition").insert(insert_payload).execute()
 
     if getattr(insert_result, "error", None):
         raise RuntimeError(insert_result.error)
+
+    # 履歴肥大化防止: 各ユーザー直近2件のみ保持
+    prune_result = (
+        supabase.table("users_condition")
+        .select("created_at")
+        .eq("uuid", uuid)
+        .order("created_at", desc=True)
+        .limit(3)
+        .execute()
+    )
+    if getattr(prune_result, "error", None):
+        raise RuntimeError(prune_result.error)
+
+    if prune_result.data and len(prune_result.data) > 2:
+        cutoff = prune_result.data[1]["created_at"]
+        delete_old_result = (
+            supabase.table("users_condition")
+            .delete()
+            .eq("uuid", uuid)
+            .lt("created_at", cutoff)
+            .execute()
+        )
+        if getattr(delete_old_result, "error", None):
+            raise RuntimeError(delete_old_result.error)
 
     if insert_result.data:
         return insert_result.data[0]
