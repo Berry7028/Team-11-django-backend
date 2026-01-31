@@ -269,7 +269,7 @@ async function submitMorningQuestionnaire(
 2. **自由入力**: `free_text`フィールドは、朝アンケートの場合は`morning_note`、夜アンケートの場合は`night_note`として`users_condition`テーブルに保存されます
 3. **日付判定**: 同じ日かどうかの判定はUTC基準で行われます
 4. **Supabase設定**: `SUPABASE_URL`と`SUPABASE_KEY`の環境変数が設定されている必要があります
-5. **データ更新**: 同じ日の既存レコードは削除してから新規作成されます（最新1件のみ保持）
+5. **データ更新**: 同じ日の既存レコードは削除してから新規作成されます（当日分は1件に統合）。また、`users_condition` はユーザーごとに直近2件のみ保持し、古いデータは削除されます。
 
 ## 関連ファイル
 
