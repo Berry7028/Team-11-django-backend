@@ -212,6 +212,24 @@ def get_user_conditions(user_uuid: str, limit: int = 2) -> list[dict[str, Any]]:
     return result.data if result.data else []
 
 
+def get_user_personality(user_uuid: str) -> dict[str, Any] | None:
+    """Supabaseからユーザーの性格設定を取得（mascotsテーブルから）"""
+    client = get_supabase_client()
+    result = (
+        client.table("mascots")
+        .select("personality_tags, personality_note")
+        .eq("uuid", user_uuid)
+        .limit(1)
+        .execute()
+    )
+    if result.data and len(result.data) > 0:
+        return {
+            "personality_tags": result.data[0].get("personality_tags") or [],
+            "personality_note": result.data[0].get("personality_note") or "",
+        }
+    return None
+
+
 def get_user_condition(user_uuid: str) -> dict[str, Any] | None:
     """Supabaseからユーザーの最新のconditionを取得（後方互換）"""
     conditions = get_user_conditions(user_uuid, limit=1)
@@ -285,9 +303,25 @@ def generate_recommendations(user_uuid: str) -> dict[str, Any]:
     latest = conditions[0]
     previous = conditions[1] if len(conditions) > 1 else None
 
-    # 2. OpenAIへのプロンプトを構築
-    user_input = f"""ユーザーの状態（最新2件）:
+    # 1.5. ユーザーの性格設定を取得
+    personality = get_user_personality(user_uuid)
+    personality_tags = personality.get("personality_tags", []) if personality else []
+    personality_note = personality.get("personality_note", "") if personality else ""
 
+    # 2. OpenAIへのプロンプトを構築
+    personality_section = ""
+    if personality_tags or personality_note:
+        personality_section = f"""
+【マスコットの性格設定】
+- 性格タグ: {", ".join(personality_tags) if personality_tags else "未設定"}
+- 話し方の補足: {personality_note if personality_note else "未設定"}
+
+※ マスコットの性格設定がある場合は、マスコットのメッセージをこの性格・話し方で生成してください。
+  例: 「元気いっぱい」なら明るくテンション高めに、「おっとり」ならゆったり優しく、「ツンデレ」なら少し素っ気なくも応援する感じで。
+"""
+
+    user_input = f"""ユーザーの状態（最新2件）:
+{personality_section}
 【最新】(created_at: {_get_value(latest, "created_at", "不明")})
 - 朝の気分: {_get_value(latest, "morning_mood", "未入力")}
 - 朝の体調: {_get_value(latest, "morning_condition", "未入力")}
