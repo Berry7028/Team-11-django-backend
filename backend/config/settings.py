@@ -52,11 +52,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     # Project apps
-    "apps.accounts",
-    "apps.conditions",
     "apps.quests",
-    "apps.mascots",
-    "apps.logs",
     "apps.questionnaires",
     "apps.ai",
 ]
