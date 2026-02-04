@@ -112,20 +112,29 @@ def build_mascot_prompt(
         "Great": "extremely joyful expression, sparkling eyes, big smile",
     }
 
-    prompt = f"""A cute kawaii mascot character for a mental health app.
-Character traits: {personality_traits.get(personality, personality)}.
-Color scheme: {color_mapping.get(favorite_color, favorite_color)}.
-Encouragement style: {support_styles.get(support_style, support_style)}.
-Pose energy: {activity_levels.get(activity_level, activity_level)}.
-Social energy: {social_energies.get(social_energy, social_energy)}.
-Decision style: {decision_styles.get(decision_style, decision_style)}.
-Change preference: {change_preferences.get(change_preference, change_preference)}.
-Stress recovery: {stress_copings.get(stress_coping, stress_coping)}.
-Emotional expression: {emotional_expressions.get(emotional_expression, emotional_expression)}.
-Facial expression: {mood_expressions.get(mood_status, "neutral expression")}.
-Style: simple, flat design, 220x220px optimized.
-The character should look friendly, approachable, and encouraging.
-Digital illustration, professional quality."""
+    prompt = f"""# マスコットイラスト指示書
+
+かわいく親しみやすい、精神的健康をサポートするアプリ用の3D風マスコットキャラクターを作成してください。
+
+## キャラクター特徴
+- **性格:** {personality_traits.get(personality, personality)}
+- **カラースキーム:** {color_mapping.get(favorite_color, favorite_color)}
+- **応援スタイル:** {support_styles.get(support_style, support_style)}
+- **ポーズ・活発度:** {activity_levels.get(activity_level, activity_level)}
+- **社交性エネルギー:** {social_energies.get(social_energy, social_energy)}
+- **決断スタイル:** {decision_styles.get(decision_style, decision_style)}
+- **変化への好み:** {change_preferences.get(change_preference, change_preference)}
+- **ストレス回復方法:** {stress_copings.get(stress_coping, stress_coping)}
+- **感情表現:** {emotional_expressions.get(emotional_expression, emotional_expression)}
+- **表情（気分に基づく）:** {mood_expressions.get(mood_status, "ニュートラルな表情")}
+
+## その他条件
+- スタイル: 3D風のデザイン、220x220px推奨
+- 雰囲気: 親しみやすく、励ましてくれる印象
+- 形式: デジタルイラスト、プロレベルのクオリティ
+
+
+"""
 
     return prompt
 
