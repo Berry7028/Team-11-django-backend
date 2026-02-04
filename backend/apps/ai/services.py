@@ -26,6 +26,69 @@ def generate_hint(prompt: str) -> str:
     return f"Hint for: {prompt[:50]}..."
 
 
+def build_mascot_prompt(
+    personality: str,
+    favorite_color: str,
+    support_style: str,
+    activity_level: str,
+    mood_status: str,
+) -> str:
+    """
+    アンケート結果から Gemini 3 Pro Image Preview 用のプロンプトを生成する。
+    参照画像と組み合わせて既存テイストに寄せる。
+    """
+
+    personality_traits = {
+        "元気いっぱい": "energetic and cheerful, round and bouncy design",
+        "おっとり穏やか": "calm and gentle, soft rounded features",
+        "真面目で几帳面": "serious and organized, clean sharp lines",
+        "天然でマイペース": "airheaded and easygoing, fluffy asymmetric design",
+        "ツンデレ": "tsundere personality, sharp but cute features",
+    }
+
+    color_mapping = {
+        "赤系": "warm red and orange tones",
+        "青系": "cool blue tones",
+        "緑系": "natural green tones",
+        "黄色系": "bright yellow tones",
+        "紫系": "mystical purple tones",
+        "ピンク系": "soft pink tones",
+    }
+
+    support_styles = {
+        "元気に励ます": "high-energy, upbeat encouragement",
+        "優しく寄り添う": "gentle and empathetic encouragement",
+        "論理的にアドバイス": "calm and thoughtful encouragement",
+        "ユーモアで和ませる": "playful and humorous encouragement",
+    }
+
+    activity_levels = {
+        "アクティブ": "dynamic pose with lively energy",
+        "バランス型": "balanced and relaxed pose",
+        "のんびり": "slow and cozy pose",
+    }
+
+    mood_expressions = {
+        "Sad": "very sad expression, downturned eyes, tears",
+        "Bad": "slightly sad expression, worried look",
+        "Okay": "neutral calm expression, gentle smile",
+        "Good": "happy expression, bright smile",
+        "Great": "extremely joyful expression, sparkling eyes, big smile",
+    }
+
+    prompt = f"""A cute kawaii mascot character for a mental health app.
+Character traits: {personality_traits.get(personality, personality)}.
+Color scheme: {color_mapping.get(favorite_color, favorite_color)}.
+Encouragement style: {support_styles.get(support_style, support_style)}.
+Pose energy: {activity_levels.get(activity_level, activity_level)}.
+Facial expression: {mood_expressions.get(mood_status, "neutral expression")}.
+Style: simple, flat design, 220x220px optimized.
+The character should look friendly, approachable, and encouraging.
+Digital illustration, professional quality."""
+
+    return prompt
+
+
 # --- AI Recommendations ---
 
 QUEST_SELECTION_TOOLS = [
@@ -400,17 +463,17 @@ def generate_recommendations(user_uuid: str) -> dict[str, Any]:
 
 
 
-def get_mascot_state(user_uuid: str) -> dict[str, str] | None:
+def get_mascot_state(user_uuid: str) -> dict[str, Any] | None:
     """
     Supabase の mascots テーブルから
-    指定ユーザーの status, message を取得
+    指定ユーザーの status, message, image_urls を取得
     """
     client = get_supabase_client()
 
     result = (
         client
         .table("mascots")
-        .select("status, message")
+        .select("status, message, image_urls")
         .eq("uuid", user_uuid)
         .limit(1)
         .execute()
@@ -420,6 +483,7 @@ def get_mascot_state(user_uuid: str) -> dict[str, str] | None:
         return {
             "status": result.data[0]["status"],
             "message": result.data[0]["message"],
+            "image_urls": result.data[0].get("image_urls") or {},
         }
 
     return None
