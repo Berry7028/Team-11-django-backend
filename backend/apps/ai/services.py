@@ -31,6 +31,11 @@ def build_mascot_prompt(
     favorite_color: str,
     support_style: str,
     activity_level: str,
+    social_energy: str,
+    decision_style: str,
+    change_preference: str,
+    stress_coping: str,
+    emotional_expression: str,
     mood_status: str,
 ) -> str:
     """
@@ -68,6 +73,37 @@ def build_mascot_prompt(
         "のんびり": "slow and cozy pose",
     }
 
+    social_energies = {
+        "人といると元気になる": "extroverted and socially energized",
+        "ほどよくバランス": "balanced between social and quiet time",
+        "一人の時間で充電する": "introverted, calm and reflective",
+    }
+
+    decision_styles = {
+        "論理や事実を重視": "logic-driven and analytical",
+        "気持ちや共感を重視": "empathy-driven and warm",
+        "状況で使い分ける": "adaptive and balanced decision-making",
+    }
+
+    change_preferences = {
+        "計画通りが安心": "structured and organized",
+        "柔軟に合わせたい": "flexible and spontaneous",
+        "ほどよく両方": "balanced between structure and flexibility",
+    }
+
+    stress_copings = {
+        "一人で落ち着く": "recovers through quiet time",
+        "誰かと話す": "recovers through conversation",
+        "体を動かす": "recovers through movement",
+        "よく寝る・休む": "recovers through rest",
+    }
+
+    emotional_expressions = {
+        "表情や言葉に出す": "expressive and open",
+        "内に留めがち": "reserved and gentle",
+        "行動で示す": "shows feelings through actions",
+    }
+
     mood_expressions = {
         "Sad": "very sad expression, downturned eyes, tears",
         "Bad": "slightly sad expression, worried look",
@@ -81,6 +117,11 @@ Character traits: {personality_traits.get(personality, personality)}.
 Color scheme: {color_mapping.get(favorite_color, favorite_color)}.
 Encouragement style: {support_styles.get(support_style, support_style)}.
 Pose energy: {activity_levels.get(activity_level, activity_level)}.
+Social energy: {social_energies.get(social_energy, social_energy)}.
+Decision style: {decision_styles.get(decision_style, decision_style)}.
+Change preference: {change_preferences.get(change_preference, change_preference)}.
+Stress recovery: {stress_copings.get(stress_coping, stress_coping)}.
+Emotional expression: {emotional_expressions.get(emotional_expression, emotional_expression)}.
 Facial expression: {mood_expressions.get(mood_status, "neutral expression")}.
 Style: simple, flat design, 220x220px optimized.
 The character should look friendly, approachable, and encouraging.

@@ -120,6 +120,11 @@ def generate_mascot_images(
     favorite_color: str,
     support_style: str,
     activity_level: str,
+    social_energy: str,
+    decision_style: str,
+    change_preference: str,
+    stress_coping: str,
+    emotional_expression: str,
 ) -> List[bytes]:
     """
     5つの表情のマスコット画像を生成
@@ -138,7 +143,16 @@ def generate_mascot_images(
 
     for mood in moods:
         prompt = build_mascot_prompt(
-            personality, favorite_color, support_style, activity_level, mood
+            personality,
+            favorite_color,
+            support_style,
+            activity_level,
+            social_energy,
+            decision_style,
+            change_preference,
+            stress_coping,
+            emotional_expression,
+            mood,
         )
 
         contents: list[object] = []

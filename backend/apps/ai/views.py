@@ -120,8 +120,25 @@ class MascotOnboardingView(APIView):
         favorite_color = request.data.get("favorite_color")
         support_style = request.data.get("support_style")
         activity_level = request.data.get("activity_level")
+        social_energy = request.data.get("social_energy")
+        decision_style = request.data.get("decision_style")
+        change_preference = request.data.get("change_preference")
+        stress_coping = request.data.get("stress_coping")
+        emotional_expression = request.data.get("emotional_expression")
 
-        if not all([personality, favorite_color, support_style, activity_level]):
+        if not all(
+            [
+                personality,
+                favorite_color,
+                support_style,
+                activity_level,
+                social_energy,
+                decision_style,
+                change_preference,
+                stress_coping,
+                emotional_expression,
+            ]
+        ):
             return Response(
                 {"error": "All fields are required"},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -129,7 +146,15 @@ class MascotOnboardingView(APIView):
 
         try:
             image_data_list = generate_mascot_images(
-                personality, favorite_color, support_style, activity_level
+                personality,
+                favorite_color,
+                support_style,
+                activity_level,
+                social_energy,
+                decision_style,
+                change_preference,
+                stress_coping,
+                emotional_expression,
             )
             image_urls = upload_mascot_images(user_uuid, image_data_list)
 
