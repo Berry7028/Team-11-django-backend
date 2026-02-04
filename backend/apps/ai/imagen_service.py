@@ -21,18 +21,56 @@ def _get_env(name: str) -> str:
     return value
 
 
+def _normalize_storage_path(bucket: str, path: str) -> str:
+    cleaned = path.strip().lstrip("/")
+    if cleaned.startswith(f"{bucket}/"):
+        return cleaned[len(bucket) + 1 :]
+    return cleaned
+
+
+def _list_reference_paths(bucket: str, prefix: str) -> List[str]:
+    client = get_supabase_client()
+    normalized_prefix = prefix.strip().lstrip("/").rstrip("/")
+    list_path = normalized_prefix or ""
+    try:
+        entries = client.storage.from_(bucket).list(
+            path=list_path,
+            options={"limit": 1000},
+        )
+    except TypeError:
+        entries = client.storage.from_(bucket).list(path=list_path)
+
+    paths: List[str] = []
+    for entry in entries or []:
+        if not isinstance(entry, dict):
+            continue
+        name = entry.get("name")
+        if not name:
+            continue
+        if name.endswith("/"):
+            continue
+        if normalized_prefix:
+            paths.append(f"{normalized_prefix}/{name}")
+        else:
+            paths.append(name)
+
+    paths.sort()
+    return paths
+
+
 def load_reference_images() -> List[bytes]:
     bucket = os.getenv("MASCOT_REFERENCE_BUCKET", "mascot-references")
     paths_raw = os.getenv("MASCOT_REFERENCE_PATHS", "")
-    paths = [p.strip() for p in paths_raw.split(",") if p.strip()]
-    normalized_paths: List[str] = []
-    for path in paths:
-        if path.startswith(f"{bucket}/"):
-            normalized_paths.append(path[len(bucket) + 1 :])
-        else:
-            normalized_paths.append(path)
-    if not paths:
-        raise ValueError("MASCOT_REFERENCE_PATHS is empty")
+    prefix_raw = os.getenv("MASCOT_REFERENCE_PREFIX", "")
+
+    using_explicit_paths = bool(paths_raw.strip())
+    if using_explicit_paths:
+        raw_paths = [p for p in paths_raw.split(",") if p.strip()]
+        normalized_paths = [_normalize_storage_path(bucket, p) for p in raw_paths]
+    else:
+        normalized_paths = _list_reference_paths(bucket, prefix_raw)
+        if not normalized_paths:
+            raise ValueError("No reference images found in bucket")
 
     client = get_supabase_client()
     images: List[bytes] = []
@@ -40,11 +78,32 @@ def load_reference_images() -> List[bytes]:
         try:
             data = client.storage.from_(bucket).download(path)
         except Exception as exc:
-            logger.error("Failed to download reference image: %s/%s", bucket, path)
-            raise ValueError(f"Reference image not found: {bucket}/{path}") from exc
+            if using_explicit_paths:
+                logger.error("Failed to download reference image: %s/%s", bucket, path)
+                raise ValueError(
+                    f"Reference image not found: {bucket}/{path}"
+                ) from exc
+            logger.warning(
+                "Skipping non-file entry or inaccessible path: %s/%s",
+                bucket,
+                path,
+            )
+            continue
         if isinstance(data, str):
             data = data.encode("utf-8")
         images.append(data)
+
+    if not images:
+        raise ValueError("No reference images could be downloaded")
+
+    if len(images) != 5:
+        logger.warning(
+            "Expected 5 reference images but found %s (bucket=%s prefix=%s)",
+            len(images),
+            bucket,
+            prefix_raw or "/",
+        )
+
     return images
 
 
