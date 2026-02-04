@@ -500,10 +500,6 @@ def generate_recommendations(user_uuid: str) -> dict[str, Any]:
     save_mascot(user_uuid, mascot)
 
     return {"quests": quests, "mascot": mascot}
-
-
-
-
 def get_mascot_state(user_uuid: str) -> dict[str, Any] | None:
     """
     Supabase の mascots テーブルから
@@ -512,8 +508,7 @@ def get_mascot_state(user_uuid: str) -> dict[str, Any] | None:
     client = get_supabase_client()
 
     result = (
-        client
-        .table("mascots")
+        client.table("mascots")
         .select("status, message, image_urls")
         .eq("uuid", user_uuid)
         .limit(1)
