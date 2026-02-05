@@ -26,5 +26,8 @@ def get_supabase_client() -> Client:
             "SUPABASE_URL または SUPABASE_SERVICE_KEY/SUPABASE_KEY が未設定です。"
         )
 
+    if not url.endswith("/"):
+        url = f"{url}/"
+
     _client = create_client(url, key)
     return _client
