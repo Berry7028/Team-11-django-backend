@@ -4,12 +4,19 @@ AI API endpoints.
 
 from __future__ import annotations
 
+import logging
+
 from rest_framework import permissions, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .imagen_service import generate_mascot_images
 from .services import generate_hint, generate_recommendations, get_mascot_state
+from .storage_service import upload_mascot_images
+from .supabase_client import get_supabase_client
+
+logger = logging.getLogger(__name__)
 
 
 class HintView(APIView):
@@ -90,4 +97,104 @@ class MascotStateView(APIView):
             )
 
         return Response(mascot, status=status.HTTP_200_OK)
+
+
+class MascotOnboardingView(APIView):
+    """
+    POST /api/ai/onboarding/complete/
+
+    アンケート結果からマスコット画像を生成して保存する。
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request: Request) -> Response:
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            return Response(
+                {"error": "X-User-UUID ヘッダーが必要です"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        personality = request.data.get("personality")
+        favorite_color = request.data.get("favorite_color")
+        support_style = request.data.get("support_style")
+        activity_level = request.data.get("activity_level")
+        social_energy = request.data.get("social_energy")
+        decision_style = request.data.get("decision_style")
+        change_preference = request.data.get("change_preference")
+        stress_coping = request.data.get("stress_coping")
+        emotional_expression = request.data.get("emotional_expression")
+
+        if not all(
+            [
+                personality,
+                favorite_color,
+                support_style,
+                activity_level,
+                social_energy,
+                decision_style,
+                change_preference,
+                stress_coping,
+                emotional_expression,
+            ]
+        ):
+            return Response(
+                {"error": "All fields are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            image_data_list = generate_mascot_images(
+                personality,
+                favorite_color,
+                support_style,
+                activity_level,
+                social_energy,
+                decision_style,
+                change_preference,
+                stress_coping,
+                emotional_expression,
+            )
+            image_urls = upload_mascot_images(user_uuid, image_data_list)
+
+            client = get_supabase_client()
+            existing = (
+                client.table("mascots")
+                .select("id")
+                .eq("uuid", user_uuid)
+                .limit(1)
+                .execute()
+            )
+
+            if existing.data and len(existing.data) > 0:
+                client.table("mascots").update(
+                    {
+                        "image_urls": image_urls,
+                    }
+                ).eq("uuid", user_uuid).execute()
+            else:
+                client.table("mascots").insert(
+                    {
+                        "uuid": user_uuid,
+                        "status": "Okay",
+                        "message": "よろしくね！一緒に頑張ろう！",
+                        "image_urls": image_urls,
+                    }
+                ).execute()
+
+            return Response(
+                {
+                    "mascot_id": user_uuid,
+                    "image_urls": image_urls,
+                    "message": "あなた専用のキャラクターが完成しました！",
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        except Exception as exc:
+            logger.error("Onboarding failed: %s", str(exc))
+            return Response(
+                {"error": "Failed to generate mascot", "details": str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
     
