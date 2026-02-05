@@ -26,6 +26,119 @@ def generate_hint(prompt: str) -> str:
     return f"Hint for: {prompt[:50]}..."
 
 
+def build_mascot_prompt(
+    personality: str,
+    favorite_color: str,
+    support_style: str,
+    activity_level: str,
+    social_energy: str,
+    decision_style: str,
+    change_preference: str,
+    stress_coping: str,
+    emotional_expression: str,
+    mood_status: str,
+) -> str:
+    """
+    アンケート結果から Gemini 3 Pro Image Preview 用のプロンプトを生成する。
+    参照画像と組み合わせて既存テイストに寄せる。
+    """
+
+    personality_traits = {
+        "元気いっぱい": "energetic and cheerful, round and bouncy design",
+        "おっとり穏やか": "calm and gentle, soft rounded features",
+        "真面目で几帳面": "serious and organized, clean sharp lines",
+        "天然でマイペース": "airheaded and easygoing, fluffy asymmetric design",
+        "ツンデレ": "tsundere personality, sharp but cute features",
+    }
+
+    color_mapping = {
+        "赤系": "warm red and orange tones",
+        "青系": "cool blue tones",
+        "緑系": "natural green tones",
+        "黄色系": "bright yellow tones",
+        "紫系": "mystical purple tones",
+        "ピンク系": "soft pink tones",
+    }
+
+    support_styles = {
+        "元気に励ます": "high-energy, upbeat encouragement",
+        "優しく寄り添う": "gentle and empathetic encouragement",
+        "論理的にアドバイス": "calm and thoughtful encouragement",
+        "ユーモアで和ませる": "playful and humorous encouragement",
+    }
+
+    activity_levels = {
+        "アクティブ": "dynamic pose with lively energy",
+        "バランス型": "balanced and relaxed pose",
+        "のんびり": "slow and cozy pose",
+    }
+
+    social_energies = {
+        "人といると元気になる": "extroverted and socially energized",
+        "ほどよくバランス": "balanced between social and quiet time",
+        "一人の時間で充電する": "introverted, calm and reflective",
+    }
+
+    decision_styles = {
+        "論理や事実を重視": "logic-driven and analytical",
+        "気持ちや共感を重視": "empathy-driven and warm",
+        "状況で使い分ける": "adaptive and balanced decision-making",
+    }
+
+    change_preferences = {
+        "計画通りが安心": "structured and organized",
+        "柔軟に合わせたい": "flexible and spontaneous",
+        "ほどよく両方": "balanced between structure and flexibility",
+    }
+
+    stress_copings = {
+        "一人で落ち着く": "recovers through quiet time",
+        "誰かと話す": "recovers through conversation",
+        "体を動かす": "recovers through movement",
+        "よく寝る・休む": "recovers through rest",
+    }
+
+    emotional_expressions = {
+        "表情や言葉に出す": "expressive and open",
+        "内に留めがち": "reserved and gentle",
+        "行動で示す": "shows feelings through actions",
+    }
+
+    mood_expressions = {
+        "Sad": "very sad expression, downturned eyes, tears",
+        "Bad": "slightly sad expression, worried look",
+        "Okay": "neutral calm expression, gentle smile",
+        "Good": "happy expression, bright smile",
+        "Great": "extremely joyful expression, sparkling eyes, big smile",
+    }
+
+    prompt = f"""# マスコットイラスト指示書
+
+かわいく親しみやすい、精神的健康をサポートするアプリ用の3D風マスコットキャラクターを作成してください。
+
+## キャラクター特徴
+- **性格:** {personality_traits.get(personality, personality)}
+- **カラースキーム:** {color_mapping.get(favorite_color, favorite_color)}
+- **応援スタイル:** {support_styles.get(support_style, support_style)}
+- **ポーズ・活発度:** {activity_levels.get(activity_level, activity_level)}
+- **社交性エネルギー:** {social_energies.get(social_energy, social_energy)}
+- **決断スタイル:** {decision_styles.get(decision_style, decision_style)}
+- **変化への好み:** {change_preferences.get(change_preference, change_preference)}
+- **ストレス回復方法:** {stress_copings.get(stress_coping, stress_coping)}
+- **感情表現:** {emotional_expressions.get(emotional_expression, emotional_expression)}
+- **表情（気分に基づく）:** {mood_expressions.get(mood_status, "ニュートラルな表情")}
+
+## その他条件
+- スタイル: 3D風のデザイン、220x220px推奨
+- 雰囲気: 親しみやすく、励ましてくれる印象
+- 形式: デジタルイラスト、プロレベルのクオリティ
+
+
+"""
+
+    return prompt
+
+
 # --- AI Recommendations ---
 
 QUEST_SELECTION_TOOLS = [
@@ -396,21 +509,16 @@ def generate_recommendations(user_uuid: str) -> dict[str, Any]:
     save_mascot(user_uuid, mascot)
 
     return {"quests": quests, "mascot": mascot}
-
-
-
-
-def get_mascot_state(user_uuid: str) -> dict[str, str] | None:
+def get_mascot_state(user_uuid: str) -> dict[str, Any] | None:
     """
     Supabase の mascots テーブルから
-    指定ユーザーの status, message を取得
+    指定ユーザーの status, message, image_urls を取得
     """
     client = get_supabase_client()
 
     result = (
-        client
-        .table("mascots")
-        .select("status, message")
+        client.table("mascots")
+        .select("status, message, image_urls")
         .eq("uuid", user_uuid)
         .limit(1)
         .execute()
@@ -420,6 +528,7 @@ def get_mascot_state(user_uuid: str) -> dict[str, str] | None:
         return {
             "status": result.data[0]["status"],
             "message": result.data[0]["message"],
+            "image_urls": result.data[0].get("image_urls") or {},
         }
 
     return None
