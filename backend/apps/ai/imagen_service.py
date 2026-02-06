@@ -165,11 +165,24 @@ def generate_mascot_images(
         contents.append(prompt)
 
         response = client.models.generate_content(
-            model="gemini-3-pro-image-preview",
+            model="gemini-2.5-flash-image",
             contents=contents,
+            config=types.GenerateContentConfig(
+                response_modalities=["IMAGE"],
+                image_config=types.ImageConfig(
+                    aspect_ratio="1:1",
+                ),
+            ),
         )
-        image_part = response.candidates[0].content.parts[0]
-        return _normalize_image_bytes(image_part.inline_data.data)
+        parts = response.candidates[0].content.parts
+        image_data = None
+        for part in parts:
+            if part.inline_data is not None and part.inline_data.data is not None:
+                image_data = _normalize_image_bytes(part.inline_data.data)
+                break
+        if image_data is None:
+            raise ValueError("No image data found in model response")
+        return image_data
 
     try:
         anchor_mood = "Okay"
