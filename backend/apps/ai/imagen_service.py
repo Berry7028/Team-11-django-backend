@@ -141,7 +141,9 @@ def generate_mascot_images(
 
     reference_images = load_reference_images()
 
-    for mood in moods:
+    generated: dict[str, bytes] = {}
+
+    def _generate_with_references(mood: str, extra_refs: List[bytes]) -> bytes:
         prompt = build_mascot_prompt(
             personality,
             favorite_color,
@@ -158,19 +160,39 @@ def generate_mascot_images(
         contents: list[object] = []
         for ref in reference_images:
             contents.append(types.Part.from_bytes(data=ref, mime_type="image/png"))
+        for ref in extra_refs:
+            contents.append(types.Part.from_bytes(data=ref, mime_type="image/png"))
         contents.append(prompt)
 
-        try:
-            response = client.models.generate_content(
-                model="gemini-3-pro-image-preview",
-                contents=contents,
+        response = client.models.generate_content(
+            model="gemini-3-pro-image-preview",
+            contents=contents,
+        )
+        image_part = response.candidates[0].content.parts[0]
+        return _normalize_image_bytes(image_part.inline_data.data)
+
+    try:
+        anchor_mood = "Okay"
+        anchor_image = _generate_with_references(anchor_mood, [])
+        generated[anchor_mood] = anchor_image
+        logger.info("Generated %s mascot image successfully", anchor_mood)
+
+        previous_image = anchor_image
+        for mood in [m for m in moods if m != anchor_mood]:
+            if not previous_image:
+                raise ValueError("Previous mascot image is missing")
+            image_bytes = _generate_with_references(
+                mood,
+                [anchor_image, previous_image],
             )
-            image_part = response.candidates[0].content.parts[0]
-            image_bytes = _normalize_image_bytes(image_part.inline_data.data)
-            image_data_list.append(image_bytes)
+            generated[mood] = image_bytes
+            previous_image = image_bytes
             logger.info("Generated %s mascot image successfully", mood)
-        except Exception as exc:
-            logger.error("Failed to generate %s image: %s", mood, str(exc))
-            raise
+    except Exception as exc:
+        logger.error("Failed to generate mascot images: %s", str(exc))
+        raise
+
+    for mood in moods:
+        image_data_list.append(generated[mood])
 
     return image_data_list
