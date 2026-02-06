@@ -36,7 +36,8 @@ def upload_mascot_images(user_uuid: str, image_data_list: List[bytes]) -> Dict[s
         client.storage.from_(bucket).upload(
             file_name,
             image_data,
-            file_options={"content-type": "image/png", "upsert": True},
+            # Supabase expects header values as str/bytes; avoid bool in headers.
+            file_options={"content-type": "image/png", "upsert": "true"},
         )
         public_url_raw = client.storage.from_(bucket).get_public_url(file_name)
         image_urls[mood] = _extract_public_url(public_url_raw)
