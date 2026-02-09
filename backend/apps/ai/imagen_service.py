@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import base64
+import io
 import logging
 import os
 from typing import List
 
-from google import genai
-from google.genai import types
+from openai import OpenAI
 
 from .services import build_mascot_prompt
 from .supabase_client import get_supabase_client
@@ -107,12 +107,28 @@ def load_reference_images() -> List[bytes]:
     return images
 
 
-def _normalize_image_bytes(data: object) -> bytes:
-    if isinstance(data, bytes):
-        return data
-    if isinstance(data, str):
-        return base64.b64decode(data)
-    raise ValueError("Unknown image data format")
+def _generate_with_references(
+    client: OpenAI,
+    prompt: str,
+    ref_images: List[bytes],
+    extra_refs: List[bytes],
+) -> bytes:
+    all_images = ref_images + extra_refs
+    image_inputs = [
+        (f"ref_{i}.png", io.BytesIO(img), "image/png")
+        for i, img in enumerate(all_images)
+    ]
+
+    response = client.images.edit(
+        model="gpt-image-1.5",
+        image=image_inputs,
+        prompt=prompt,
+        size="1024x1024",
+        quality="low",
+        background="transparent",
+    )
+
+    return base64.b64decode(response.data[0].b64_json)
 
 
 def generate_mascot_images(
@@ -133,8 +149,8 @@ def generate_mascot_images(
         5つの画像データ（バイト列）のリスト [Sad, Bad, Okay, Good, Great]
     """
 
-    api_key = _get_env("GOOGLE_GENAI_API_KEY")
-    client = genai.Client(api_key=api_key)
+    api_key = _get_env("OPENAI_API_KEY")
+    client = OpenAI(api_key=api_key)
 
     moods = ["Sad", "Bad", "Okay", "Good", "Great"]
     image_data_list: List[bytes] = []
@@ -143,8 +159,8 @@ def generate_mascot_images(
 
     generated: dict[str, bytes] = {}
 
-    def _generate_with_references(mood: str, extra_refs: List[bytes]) -> bytes:
-        prompt = build_mascot_prompt(
+    def _build_prompt(mood: str) -> str:
+        return build_mascot_prompt(
             personality,
             favorite_color,
             support_style,
@@ -157,36 +173,12 @@ def generate_mascot_images(
             mood,
         )
 
-        contents: list[object] = []
-        for ref in reference_images:
-            contents.append(types.Part.from_bytes(data=ref, mime_type="image/png"))
-        for ref in extra_refs:
-            contents.append(types.Part.from_bytes(data=ref, mime_type="image/png"))
-        contents.append(prompt)
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-image",
-            contents=contents,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE"],
-                image_config=types.ImageConfig(
-                    aspect_ratio="1:1",
-                ),
-            ),
-        )
-        parts = response.candidates[0].content.parts
-        image_data = None
-        for part in parts:
-            if part.inline_data is not None and part.inline_data.data is not None:
-                image_data = _normalize_image_bytes(part.inline_data.data)
-                break
-        if image_data is None:
-            raise ValueError("No image data found in model response")
-        return image_data
-
     try:
         anchor_mood = "Okay"
-        anchor_image = _generate_with_references(anchor_mood, [])
+        anchor_prompt = _build_prompt(anchor_mood)
+        anchor_image = _generate_with_references(
+            client, anchor_prompt, reference_images, []
+        )
         generated[anchor_mood] = anchor_image
         logger.info("Generated %s mascot image successfully", anchor_mood)
 
@@ -194,8 +186,11 @@ def generate_mascot_images(
         for mood in [m for m in moods if m != anchor_mood]:
             if not previous_image:
                 raise ValueError("Previous mascot image is missing")
+            prompt = _build_prompt(mood)
             image_bytes = _generate_with_references(
-                mood,
+                client,
+                prompt,
+                reference_images,
                 [anchor_image, previous_image],
             )
             generated[mood] = image_bytes
