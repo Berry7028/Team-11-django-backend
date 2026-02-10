@@ -39,7 +39,7 @@ def build_mascot_prompt(
     mood_status: str,
 ) -> str:
     """
-    アンケート結果から Gemini 2.5 Flash Image 用のプロンプトを生成する。
+    アンケート結果から OpenAI gpt-image-1.5 用のプロンプトを生成する。
     参照画像と組み合わせて既存テイストに寄せる。
     """
 
