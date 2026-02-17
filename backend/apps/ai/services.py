@@ -421,8 +421,16 @@ def _sanitize_note(value: Any, default: str) -> str:
     value = value.strip()[:280]
     if not value:
         return default
-    value = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "[REDACTED_EMAIL]", value)
-    value = re.sub(r"\b\d{2,4}[-\s]?\d{2,4}[-\s]?\d{3,4}\b", "[REDACTED_PHONE]", value)
+    value = re.sub(
+        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
+        "[REDACTED_EMAIL]",
+        value,
+    )
+    value = re.sub(
+        r"\b(?:0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4}|\+\d{1,3}[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4})\b",
+        "[REDACTED_PHONE]",
+        value,
+    )
     value = re.sub(r"\b[a-zA-Z0-9_-]{24,}\b", "[REDACTED_TOKEN]", value)
     return value
 
