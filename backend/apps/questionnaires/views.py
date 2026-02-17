@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from rest_framework import permissions, status, viewsets
+from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -30,12 +30,12 @@ class QuestionnaireViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
 
 
-class AnswerViewSet(viewsets.ModelViewSet):
+class AnswerViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     """
     回答送信エンドポイント。
     """
 
-    queryset = Answer.objects.all()
+    queryset = Answer.objects.none()
     serializer_class = AnswerSerializer
     permission_classes = [permissions.AllowAny]
 
@@ -214,9 +214,9 @@ class MorningQuestionnaireView(APIView):
                 serializer.validated_data["condition"],
                 serializer.validated_data.get("free_text", ""),
             )
-        except RuntimeError as exc:
+        except RuntimeError:
             return Response(
-                {"detail": "Supabaseの保存に失敗しました。", "error": str(exc)},
+                {"detail": "Supabaseの保存に失敗しました。"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -245,11 +245,10 @@ class NightQuestionnaireView(APIView):
                 serializer.validated_data["condition"],
                 serializer.validated_data.get("free_text", ""),
             )
-        except RuntimeError as exc:
+        except RuntimeError:
             return Response(
-                {"detail": "Supabaseの保存に失敗しました。", "error": str(exc)},
+                {"detail": "Supabaseの保存に失敗しました。"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         return Response(data, status=status.HTTP_201_CREATED)
-

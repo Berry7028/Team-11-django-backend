@@ -17,6 +17,13 @@ export class ApiClient {
 
   constructor(options: ApiClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
+    const parsedUrl = new URL(this.baseUrl);
+    const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(
+      parsedUrl.hostname
+    );
+    if (!isLocalhost && parsedUrl.protocol !== "https:") {
+      throw new Error("ApiClient baseUrl must use HTTPS outside localhost");
+    }
     this.getAuthToken = options.getAuthToken;
   }
 
@@ -78,4 +85,3 @@ export class ApiClient {
     return this.request<T>("DELETE", path);
   }
 }
-
