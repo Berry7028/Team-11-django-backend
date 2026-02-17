@@ -5,6 +5,9 @@ from typing import Dict, List
 
 from .supabase_client import get_supabase_client
 
+MAX_MASCOT_IMAGES = 5
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
 
 def _extract_public_url(value: object) -> str:
     if isinstance(value, str):
@@ -26,6 +29,15 @@ def upload_mascot_images(user_uuid: str, image_data_list: List[bytes]) -> Dict[s
     """
 
     bucket = os.getenv("MASCOT_IMAGES_BUCKET", "mascot-images")
+
+    if len(image_data_list) != MAX_MASCOT_IMAGES:
+        raise ValueError(f"Expected {MAX_MASCOT_IMAGES} mascot images")
+    for image_data in image_data_list:
+        if not isinstance(image_data, bytes):
+            raise ValueError("Image payload must be bytes")
+        if len(image_data) > MAX_IMAGE_BYTES:
+            raise ValueError("Image payload is too large")
+
     client = get_supabase_client()
 
     moods = ["Sad", "Bad", "Okay", "Good", "Great"]

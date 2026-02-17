@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 
-from rest_framework import permissions, status
+from rest_framework import permissions, status, throttling
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -31,6 +31,8 @@ class HintView(APIView):
     """
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [throttling.ScopedRateThrottle]
+    throttle_scope = "ai_hints"
 
     def post(self, request: Request) -> Response:
         prompt = request.data.get("prompt", "")
@@ -58,6 +60,8 @@ class RecommendationsView(APIView):
     """
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [throttling.ScopedRateThrottle]
+    throttle_scope = "ai_recommendations"
 
     def post(self, request: Request) -> Response:
         user_uuid = request.headers.get("X-User-UUID")
@@ -107,6 +111,8 @@ class MascotOnboardingView(APIView):
     """
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [throttling.ScopedRateThrottle]
+    throttle_scope = "ai_onboarding"
 
     def post(self, request: Request) -> Response:
         user_uuid = request.headers.get("X-User-UUID")
@@ -191,10 +197,10 @@ class MascotOnboardingView(APIView):
                 },
                 status=status.HTTP_201_CREATED,
             )
-        except Exception as exc:
-            logger.error("Onboarding failed: %s", str(exc))
+        except Exception:
+            logger.exception("Onboarding failed")
             return Response(
-                {"error": "Failed to generate mascot", "details": str(exc)},
+                {"error": "Failed to generate mascot"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
     

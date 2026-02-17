@@ -36,9 +36,13 @@ def _env(name: str, default: str | None = None) -> str:
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", get_random_secret_key())
 
-DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
+DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 
-ALLOWED_HOSTS: list[str] = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",")
+ALLOWED_HOSTS: list[str] = [
+    host.strip()
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
 
 
 INSTALLED_APPS = [
@@ -146,15 +150,23 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "URL_FORMAT_OVERRIDE": None,  # format_suffix_patternsを無効化
+    "DEFAULT_THROTTLE_RATES": {
+        "ai_hints": "20/min",
+        "ai_recommendations": "5/min",
+        "ai_onboarding": "3/hour",
+    },
 }
 
 
-if os.getenv("CORS_ALLOW_ALL_ORIGINS", "true").lower() == "true":
+if os.getenv("CORS_ALLOW_ALL_ORIGINS", "false").lower() == "true":
     CORS_ALLOW_ALL_ORIGINS = True
     CORS_ALLOWED_ORIGINS: list[str] = []
 else:
     CORS_ALLOW_ALL_ORIGINS = False
-    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip()
+        for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip()
+    ]
 
 CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
-

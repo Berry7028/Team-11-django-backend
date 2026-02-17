@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import date
 from typing import Any
 
@@ -412,6 +413,28 @@ def save_mascot(user_uuid: str, mascot: dict[str, str]) -> None:
         ).execute()
 
 
+def _sanitize_note(value: Any, default: str) -> str:
+    if value in (None, ""):
+        return default
+    if not isinstance(value, str):
+        value = str(value)
+    value = value.strip()[:280]
+    if not value:
+        return default
+    value = re.sub(
+        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
+        "[REDACTED_EMAIL]",
+        value,
+    )
+    value = re.sub(
+        r"\b(?:0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4}|\+\d{1,3}[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4})\b",
+        "[REDACTED_PHONE]",
+        value,
+    )
+    value = re.sub(r"\b[a-zA-Z0-9_-]{24,}\b", "[REDACTED_TOKEN]", value)
+    return value
+
+
 def generate_recommendations(user_uuid: str) -> dict[str, Any]:
     """
     ユーザーのconditionを元にOpenAIでクエスト・マスコット状態を生成し、Supabaseに保存する。
@@ -437,7 +460,11 @@ def generate_recommendations(user_uuid: str) -> dict[str, Any]:
     # 1.5. ユーザーの性格設定を取得
     personality = get_user_personality(user_uuid)
     personality_tags = personality.get("personality_tags", []) if personality else []
-    personality_note = personality.get("personality_note", "") if personality else ""
+    personality_note = (
+        _sanitize_note(personality.get("personality_note"), "未設定")
+        if personality
+        else "未設定"
+    )
 
     # 2. OpenAIへのプロンプトを構築
     personality_section = ""
@@ -451,23 +478,32 @@ def generate_recommendations(user_uuid: str) -> dict[str, Any]:
   例: 「元気いっぱい」なら明るくテンション高めに、「おっとり」ならゆったり優しく、「ツンデレ」なら少し素っ気なくも応援する感じで。
 """
 
+    latest_morning_note = _sanitize_note(latest.get("morning_note"), "未入力")
+    latest_night_note = _sanitize_note(latest.get("night_note"), "未入力")
+    previous_morning_note = _sanitize_note(
+        previous.get("morning_note") if previous else None, "データなし"
+    )
+    previous_night_note = _sanitize_note(
+        previous.get("night_note") if previous else None, "データなし"
+    )
+
     user_input = f"""ユーザーの状態（最新2件）:
 {personality_section}
 【最新】(created_at: {_get_value(latest, "created_at", "不明")})
 - 朝の気分: {_get_value(latest, "morning_mood", "未入力")}
 - 朝の体調: {_get_value(latest, "morning_condition", "未入力")}
-- 朝のメモ: {_get_value(latest, "morning_note", "未入力")}
+- 朝のメモ: {latest_morning_note}
 - 夜の気分: {_get_value(latest, "night_mood", "未入力")}
 - 夜の体調: {_get_value(latest, "night_condition", "未入力")}
-- 夜のメモ: {_get_value(latest, "night_note", "未入力")}
+- 夜のメモ: {latest_night_note}
 
 【1つ前】(created_at: {_get_value(previous, "created_at", "データなし")})
 - 朝の気分: {_get_value(previous, "morning_mood", "データなし")}
 - 朝の体調: {_get_value(previous, "morning_condition", "データなし")}
-- 朝のメモ: {_get_value(previous, "morning_note", "データなし")}
+- 朝のメモ: {previous_morning_note}
 - 夜の気分: {_get_value(previous, "night_mood", "データなし")}
 - 夜の体調: {_get_value(previous, "night_condition", "データなし")}
-- 夜のメモ: {_get_value(previous, "night_note", "データなし")}
+- 夜のメモ: {previous_night_note}
 
 【重要】マスコットのstatusは、最新2件のうち両方で気分が「つらい」になっている場合のみ「Bad」または「Sad」にしてください。
 1件だけ「つらい」の場合は、急に「Bad」「Sad」にしないでください。

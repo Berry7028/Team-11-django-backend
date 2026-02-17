@@ -8,6 +8,7 @@ Quests API endpoints.
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 
 from rest_framework import permissions, status, viewsets
@@ -18,6 +19,8 @@ from rest_framework.views import APIView
 from .models import Quest
 from .serializers import QuestSerializer
 from .supabase_client import get_supabase_client
+
+logger = logging.getLogger(__name__)
 
 
 def _get_user_uuid(request: Request) -> str | None:
@@ -42,9 +45,9 @@ class QuestsGetView(APIView):
 
         try:
             client = get_supabase_client()
-        except ValueError as exc:
+        except ValueError:
             return Response(
-                {"detail": "Supabase設定エラー", "error": str(exc)},
+                {"detail": "Supabase設定エラー"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -58,9 +61,10 @@ class QuestsGetView(APIView):
                 .eq("day", today)
                 .execute()
             )
-        except Exception as exc:
+        except Exception:
+            logger.exception("Failed to fetch quests from Supabase")
             return Response(
-                {"detail": "Supabaseの取得に失敗しました。", "error": str(exc)},
+                {"detail": "Supabaseの取得に失敗しました。"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -85,9 +89,9 @@ class QuestCompleteView(APIView):
 
         try:
             client = get_supabase_client()
-        except ValueError as exc:
+        except ValueError:
             return Response(
-                {"detail": "Supabase設定エラー", "error": str(exc)},
+                {"detail": "Supabase設定エラー"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -127,9 +131,10 @@ class QuestCompleteView(APIView):
 
             return Response(update_result.data[0], status=status.HTTP_200_OK)
 
-        except Exception as exc:
+        except Exception:
+            logger.exception("Failed to complete quest in Supabase")
             return Response(
-                {"detail": "Supabaseの操作に失敗しました。", "error": str(exc)},
+                {"detail": "Supabaseの操作に失敗しました。"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -166,9 +171,9 @@ class QuestAdoptView(APIView):
 
         try:
             client = get_supabase_client()
-        except ValueError as exc:
+        except ValueError:
             return Response(
-                {"detail": "Supabase設定エラー", "error": str(exc)},
+                {"detail": "Supabase設定エラー"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -215,9 +220,10 @@ class QuestAdoptView(APIView):
                 status=status.HTTP_201_CREATED,
             )
 
-        except Exception as exc:
+        except Exception:
+            logger.exception("Failed to adopt quest in Supabase")
             return Response(
-                {"detail": "Supabaseの操作に失敗しました。", "error": str(exc)},
+                {"detail": "Supabaseの操作に失敗しました。"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -230,6 +236,9 @@ class QuestViewSet(viewsets.ModelViewSet):
     queryset = Quest.objects.select_related("owner").all()
     serializer_class = QuestSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(owner=self.request.user)
 
     def perform_create(self, serializer: QuestSerializer) -> None:
         serializer.save(owner=self.request.user)
